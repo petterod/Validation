@@ -1,0 +1,231 @@
+package Validering;
+
+import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class AddingRecordsWebserver {
+	//Format for fieldnames er:
+	//ip-address,user-identifier, userid, timestamp, request method, url, http-version, http-status code, 
+	//object size,objectnr,objecttype; 
+	ArrayList<String> fieldnames = new ArrayList<String>(Arrays.asList("CHECKIP","BOOLEAN","BOOLEAN",
+			"MINUSLONG","BOOLEAN","BOOLEAN","BOOLEAN","MINUS","MINUS","objectnr","objecttype"));
+	
+	ArrayList<List<String>> pkts = new ArrayList<>();
+	List<String> pkt;
+	String FNAME;
+	
+	public AddingRecordsWebserver(String inputO, String inputA, String outputO, String outputA) throws FileNotFoundException {
+		FNAME = outputO;
+		ObjectGrouping og1 = new ObjectGrouping(inputO,"Webserver");
+		pkts = og1.getPkts();
+		addingInterRecords();
+		toTextFile();
+		FNAME = outputA;
+		ObjectGrouping og2 = new ObjectGrouping(inputA,"Webserver");
+		pkts = og2.getPkts();
+		addingInterRecords();
+		toTextFile();
+	}
+	
+	public void getFieldnames() {
+		int j = 0;
+		for(String f : fieldnames) {
+			System.out.println(j + " " + f);
+			j++;
+		}
+	}
+	
+	//Method for finding the first pkt from an object
+	public List<String> findingFirstPkt(ArrayList<List<String>> pkts, int i) {
+		for(List<String> pkt : pkts) {
+			if(pkt.get(9).equals(Integer.toString(i))) {
+				return pkt;
+			}
+		}
+		return null;
+	}
+	
+	public void addingInterRecords() {
+		for(int i = 1; i < Integer.parseInt(pkts.get(pkts.size()-1).get(9))+1; i ++) {
+			this.pkt = findingFirstPkt(pkts,i);
+			for(List<String> pkt : pkts) {	
+				if(Integer.parseInt(pkt.get(9)) == i) {
+					addingFields(pkt);
+					this.pkt = pkt;
+				}else {
+					continue;
+				}
+			}
+		}
+	}
+	
+	public void addingFields(List<String> pkt) {
+		for(int i= 0;i < fieldnames.size();i++) {
+			if(fieldnames.get(i).equals("MINUS")) {
+				compareMinus(pkt,i);
+			}
+			else if(fieldnames.get(i).equals("CHECKIP")) {
+				checkIP(pkt,i);
+			}
+			else if(fieldnames.get(i).equals("MINUSLONG")) {
+				compareMinusLong(pkt,i);
+			}
+			else if(fieldnames.get(i).equals("BOOLEAN")) {
+				compareBoolean(pkt,i);
+			}
+			else if(fieldnames.get(i).equals("XOR")) {
+				compareXOR(pkt,i);
+			}
+			else if(fieldnames.get(i).equals("XORIPV4")) {
+				compareXORV4(pkt,i);
+			}
+			else if(fieldnames.get(i).equals("XORIPV6")) {
+				compareXORV6(pkt,i);
+			}
+			else {
+				continue;
+			}
+		}
+		
+	}
+	
+	public void checkIP(List<String> pkt, int i) {
+		if(pkt.get(i).contains(".")) {
+			compareXORV4(pkt, i);
+		}
+		else if(pkt.get(i).contains(":")) {
+			compareXORV6(pkt,i);
+		}
+	}
+	
+	public void compareXOR(List<String> pkt, int i) {
+		fieldnames.add(Integer.toString(i));
+		if(this.pkt.equals(pkt)){
+			pkt.add("0");
+		}
+		else {
+			pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(i))^Integer.parseInt(pkt.get(i)))));
+		}
+	}
+	
+	public void compareXORV4(List<String> pkt, int i) {
+		if(!this.pkt.get(i).equals("null") && !pkt.get(i).equals("null")) {
+			fieldnames.add(Integer.toString(i));
+			if(this.pkt.equals(pkt)) {
+				pkt.add("0.0.0.0");
+			}
+			else {
+				String[] t = this.pkt.get(i).split("\\.");
+				String[] s = pkt.get(i).split("\\.");
+				int oc1 = Integer.parseInt(t[0])^Integer.parseInt(s[0]);
+				int oc2 = Integer.parseInt(t[1])^Integer.parseInt(s[1]);
+				int oc3 = Integer.parseInt(t[2])^Integer.parseInt(s[2]);
+				int oc4 = Integer.parseInt(t[3])^Integer.parseInt(s[3]);
+				pkt.add(oc1 + "." + oc2 + "." + oc3 + "." + oc4);
+			}	
+		}
+	}
+
+	public void compareXORV6(List<String> pkt, int i) {
+		if(!this.pkt.get(i).equals("null") && !pkt.get(i).equals("null")) {	
+			fieldnames.add(Integer.toString(i));
+			if(this.pkt.equals(pkt)) {
+				pkt.add("0:0:0:0:0:0:0:0");
+			}
+			else {
+				String[] t = this.pkt.get(i).split(":");
+				String[] s = pkt.get(i).split(":");
+				String oc1 = Integer.toHexString(Integer.parseInt(t[0],16)^Integer.parseInt(s[0],16));
+				String oc2 = Integer.toHexString(Integer.parseInt(t[1],16)^Integer.parseInt(s[1],16));
+				String oc3 = Integer.toHexString(Integer.parseInt(t[2],16)^Integer.parseInt(s[2],16));
+				String oc4 = Integer.toHexString(Integer.parseInt(t[3],16)^Integer.parseInt(s[3],16));
+				String oc5 = Integer.toHexString(Integer.parseInt(t[4],16)^Integer.parseInt(s[4],16));
+				String oc6 = Integer.toHexString(Integer.parseInt(t[5],16)^Integer.parseInt(s[5],16));
+				String oc7 = Integer.toHexString(Integer.parseInt(t[6],16)^Integer.parseInt(s[6],16));
+				String oc8 = Integer.toHexString(Integer.parseInt(t[7],16)^Integer.parseInt(s[7],16));
+				pkt.add(oc1 + ":" + oc2 + ":" + oc3 + ":" + oc4 + ":" + oc5 + ":" + oc6 + ":" + oc7 + ":" + oc8);
+			}	
+		}
+	}
+	
+	public void compareMinus(List<String> pkt, int i) {
+		fieldnames.add(Integer.toString(i));
+		if(this.pkt.equals(pkt)){
+			pkt.add("0");
+		}
+		else {
+			pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(i)) - Integer.parseInt(pkt.get(i)))));
+		}
+	}
+	
+	public void compareMinusLong(List<String> pkt, int i) {
+		fieldnames.add(Integer.toString(i));
+		if(this.pkt.equals(pkt)){
+			pkt.add("0");
+		}
+		else {
+			pkt.add(Long.toString(Math.abs(Long.parseLong(this.pkt.get(i)) - Long.parseLong(pkt.get(i)))));
+		}
+	}
+	
+	public void compareBoolean(List<String> pkt, int i) {
+		fieldnames.add(Integer.toString(i));
+		if(this.pkt.equals(pkt)){
+			pkt.add("true");
+		}
+		else {
+			pkt.add(Boolean.toString((this.pkt.get(i).equals(pkt.get(i)))));
+		}
+	}
+	
+//	public void outprint() {
+//		for(List<String> pkt : pkts) {
+//			System.out.println(pkt.get(63));
+//		}
+//	}
+	
+	public void toTextFile() {
+		ArrayList<String> format = new ArrayList<>();
+		for(List<String> pkt : pkts) {
+			String samlet = "";
+			for(String field : pkt) {
+				samlet += field + "\t"; 
+			}
+			format.add(samlet);
+		}
+		
+		try ( BufferedWriter bw = new BufferedWriter (new FileWriter (FNAME)) ) 
+		{			
+			for (String line : format) {
+				//System.out.println(line);
+				bw.write(line + "\n");
+			}
+			System.out.println("Created file " + FNAME);
+			bw.close ();
+			
+		} catch (IOException e) {
+			e.printStackTrace ();
+		}
+	}
+		
+	
+	public static void main(String[] args) throws FileNotFoundException {
+//		AddingRecordsWebserver ar = new AddingRecordsWebserver(
+//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\O-Webserver.dat",
+//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\A-Webserver.dat",
+//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\IIRO2-Webserver.dat",
+//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\IIRA2-Webserver.dat");
+		if (args.length !=4) {
+		      System.err.println("usage: java -jar jarfile.jar InputO.dat InputA.dat IIROoutput.dat IIRAoutput\n");
+		      System.exit(-1);
+		    }
+		else {
+			AddingRecordsWebserver rs = new AddingRecordsWebserver(args[0],args[1],args[2],args[3]);
+		}
+	}
+}
