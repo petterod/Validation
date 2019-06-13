@@ -8,20 +8,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class AddingRecordsNetFlow2 {
-	//Format for fieldnames er:
+public class AddingRecordsNetFlow {
+	//Format for fieldnames is:
 	//starttime,endtime,duration,protocol,srcaddress,dstaddress,srcport,dstport,srcas,dstas,inputinterfacenum,
 	//outputinterfacenum,packets,bytes,flows,flags,tos,bytespersecond,packetspersecond,bytesperpacket,
 	//objectnr,objecttype;
 	ArrayList<String> fieldnames = new ArrayList<String>(Arrays.asList("MINUSLONG","MINUSLONG","MINUSDOUBLE",
-			"BOOLEAN","CHECKIP","CHECKIP","MINUS","MINUS","MINUS","MINUS","MINUS","MINUS","MINUS","MINUSLONG",
+			"BOOLEAN","CHECKIP","CHECKIP","CHECKPROT","CHECKPROT","MINUS","MINUS","MINUS","MINUS","MINUS","MINUSLONG",
 			"MINUS","BOOLEAN","MINUS","MINUSLONG","MINUS","MINUS","objectnr","objecttype"));
 	
 	ArrayList<List<String>> pkts = new ArrayList<>();
 	List<String> pkt;
 	String FNAME;
 	
-	public AddingRecordsNetFlow2(String inputO, String inputA, String outputO, String outputA) throws FileNotFoundException {
+	public AddingRecordsNetFlow(String inputO, String inputA, String outputO, String outputA) throws FileNotFoundException {
 		FNAME = outputO;
 		ObjectGrouping og1 = new ObjectGrouping(inputO,"Netflow");
 		pkts = og1.getPkts();
@@ -32,17 +32,11 @@ public class AddingRecordsNetFlow2 {
 		pkts = og2.getPkts();
 		addingInterRecords();
 		toTextFile();
+		System.out.println(og1.getNrOfPkts() + " packets - " + og1.getHosts() + " hosts - " + og1
+				.getWebPages() + " web pages");
 	}
 	
-	public void getFieldnames() {
-		int j = 0;
-		for(String f : fieldnames) {
-			System.out.println(j + " " + f);
-			j++;
-		}
-	}
-	
-	//Method for finding the first pkt from an object
+	//Method for finding the first pkt from an object.
 	public List<String> findingFirstPkt(ArrayList<List<String>> pkts, int i) {
 		for(List<String> pkt : pkts) {
 			if(pkt.get(20).equals(Integer.toString(i))) {
@@ -52,6 +46,7 @@ public class AddingRecordsNetFlow2 {
 		return null;
 	}
 	
+	//Method for adding inter- and intra-records.
 	public void addingInterRecords() {
 		for(int i = 1; i < Integer.parseInt(pkts.get(pkts.size()-1).get(20))+1; i ++) {
 			this.pkt = findingFirstPkt(pkts,i);
@@ -67,6 +62,8 @@ public class AddingRecordsNetFlow2 {
 		}
 	}
 	
+	//Method for adding inter-records. Based on the format defined at the start, fields are compared with
+	//different methods, like MINUS, BOOLEAN, etc.
 	public void addingFields(List<String> pkt) {
 		for(int i= 0;i < fieldnames.size();i++) {
 			if(fieldnames.get(i).equals("MINUS")) {
@@ -74,6 +71,9 @@ public class AddingRecordsNetFlow2 {
 			}
 			else if(fieldnames.get(i).equals("CHECKIP")) {
 				checkIP(pkt,i);
+			}
+			else if(fieldnames.get(i).equals("CHECKPROT")) {
+				checkProtocol(pkt, i);
 			}
 			else if(fieldnames.get(i).equals("MINUSDOUBLE")) {
 				compareMinusDouble(pkt, i);
@@ -97,9 +97,9 @@ public class AddingRecordsNetFlow2 {
 				continue;
 			}
 		}
-		
 	}
 	
+	//Checks if IP address is version 4 or 6, and performs XOR comparison based on the version.
 	public void checkIP(List<String> pkt, int i) {
 		if(pkt.get(i).contains(".")) {
 			compareXORV4(pkt, i);
@@ -109,6 +109,17 @@ public class AddingRecordsNetFlow2 {
 		}
 	}
 	
+	//Checks if protocol is ICMP, otherwise a regular MINUS comparison is performed.
+	public void checkProtocol(List<String> pkt, int i) {
+		if(pkt.get(3).equals("ICMP")) {
+			pkt.add("0");
+		}
+		else {
+			compareMinus(pkt, i);
+		}
+	}
+	
+	//Comparing records based on XOR.
 	public void compareXOR(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -119,6 +130,7 @@ public class AddingRecordsNetFlow2 {
 		}
 	}
 	
+	//Comparing records based on XOR for IPv4.
 	public void compareXORV4(List<String> pkt, int i) {
 		if(!this.pkt.get(i).equals("null") && !pkt.get(i).equals("null")) {
 			fieldnames.add(Integer.toString(i));
@@ -137,6 +149,7 @@ public class AddingRecordsNetFlow2 {
 		}
 	}
 
+	//Comparing records based on XOR for IPv6.
 	public void compareXORV6(List<String> pkt, int i) {
 		if(!this.pkt.get(i).equals("null") && !pkt.get(i).equals("null")) {	
 			fieldnames.add(Integer.toString(i));
@@ -159,6 +172,7 @@ public class AddingRecordsNetFlow2 {
 		}
 	}
 	
+	//Comparing records based on MINUS.
 	public void compareMinus(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -169,6 +183,7 @@ public class AddingRecordsNetFlow2 {
 		}
 	}
 	
+	//Comparing records based on MINUS with double.
 	public void compareMinusDouble(List<String> pkt, int i) {
 		fieldnames.add(Double.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -179,6 +194,7 @@ public class AddingRecordsNetFlow2 {
 		}
 	}
 	
+	//Comparing records based on MINUS with long.
 	public void compareMinusLong(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -189,6 +205,7 @@ public class AddingRecordsNetFlow2 {
 		}
 	}
 	
+	//Comparing records based on BOOLEAN.
 	public void compareBoolean(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -199,7 +216,7 @@ public class AddingRecordsNetFlow2 {
 		}
 	}
 	
-	
+	//Method that adds intra-records for IP addresses and ports, AS numbers and interfaces.
 	public void addingIntraRecords(List<String> pkt) {
 		if(pkt.get(4).contains(".")) {
 			String[] s = pkt.get(4).split("\\.");
@@ -327,57 +344,60 @@ public class AddingRecordsNetFlow2 {
 			pkt.add(uv_oc1 + ":" + uv_oc2 + ":" + uv_oc3 + ":" + uv_oc4 + ":" + uv_oc5 + ":" + uv_oc6 + ":" + uv_oc7 + ":" + uv_oc8);
 			
 		}
-				
-		fieldnames.add("IntraRecordPort");
-		fieldnames.add("IntraRecordPort");
-		fieldnames.add("IntraRecordPort");
-		fieldnames.add("IntraRecordPort");
-		fieldnames.add("IntraRecordPort");
-		fieldnames.add("IntraRecordPort");
-		
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(6)) - Integer.parseInt(pkt.get(7)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(6)) - Integer.parseInt(pkt.get(28)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(6)) - Integer.parseInt(pkt.get(29)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(7)) - Integer.parseInt(pkt.get(28)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(7)) - Integer.parseInt(pkt.get(29)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(28)) - Integer.parseInt(pkt.get(29)))));
-		
-		fieldnames.add("IntraRecordAS");
-		fieldnames.add("IntraRecordAS");
-		fieldnames.add("IntraRecordAS");
-		fieldnames.add("IntraRecordAS");
-		fieldnames.add("IntraRecordAS");
-		fieldnames.add("IntraRecordAS");
-		
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(8)) - Integer.parseInt(pkt.get(9)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(8)) - Integer.parseInt(pkt.get(30)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(8)) - Integer.parseInt(pkt.get(31)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(9)) - Integer.parseInt(pkt.get(30)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(9)) - Integer.parseInt(pkt.get(31)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(30)) - Integer.parseInt(pkt.get(31)))));
-		
-		fieldnames.add("IntraRecordInterface");
-		fieldnames.add("IntraRecordInterface");
-		fieldnames.add("IntraRecordInterface");
-		fieldnames.add("IntraRecordInterface");
-		fieldnames.add("IntraRecordInterface");
-		fieldnames.add("IntraRecordInterface");
-		
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(10)) - Integer.parseInt(pkt.get(11)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(10)) - Integer.parseInt(pkt.get(32)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(10)) - Integer.parseInt(pkt.get(33)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(11)) - Integer.parseInt(pkt.get(32)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(11)) - Integer.parseInt(pkt.get(33)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(32)) - Integer.parseInt(pkt.get(33)))));
-	}
-	
-	public void outprint() {
-		for(List<String> pkt : pkts) {
-			System.out.println(pkt.get(2));
+		if(!pkt.get(3).equals("ICMP")) {	
+			fieldnames.add("IntraRecordPort");
+			fieldnames.add("IntraRecordPort");
+			fieldnames.add("IntraRecordPort");
+			fieldnames.add("IntraRecordPort");
+			fieldnames.add("IntraRecordPort");
+			fieldnames.add("IntraRecordPort");
+			
+			pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(6)) - Integer.parseInt(pkt.get(7)))));
+			pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(6)) - Integer.parseInt(pkt.get(28)))));
+			pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(6)) - Integer.parseInt(pkt.get(29)))));
+			pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(7)) - Integer.parseInt(pkt.get(28)))));
+			pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(7)) - Integer.parseInt(pkt.get(29)))));
+			pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(28)) - Integer.parseInt(pkt.get(29)))));
 		}
+		else {
+			pkt.add("0");
+			pkt.add("0");
+			pkt.add("0");
+			pkt.add("0");
+			pkt.add("0");
+			pkt.add("0");
+		}
+		
+		fieldnames.add("IntraRecordAS");
+		fieldnames.add("IntraRecordAS");
+		fieldnames.add("IntraRecordAS");
+		fieldnames.add("IntraRecordAS");
+		fieldnames.add("IntraRecordAS");
+		fieldnames.add("IntraRecordAS");
+		
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(8)) - Integer.parseInt(pkt.get(9)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(8)) - Integer.parseInt(pkt.get(30)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(8)) - Integer.parseInt(pkt.get(31)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(9)) - Integer.parseInt(pkt.get(30)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(9)) - Integer.parseInt(pkt.get(31)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(30)) - Integer.parseInt(pkt.get(31)))));
+		
+		fieldnames.add("IntraRecordInterface");
+		fieldnames.add("IntraRecordInterface");
+		fieldnames.add("IntraRecordInterface");
+		fieldnames.add("IntraRecordInterface");
+		fieldnames.add("IntraRecordInterface");
+		fieldnames.add("IntraRecordInterface");
+		
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(10)) - Integer.parseInt(pkt.get(11)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(10)) - Integer.parseInt(pkt.get(32)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(10)) - Integer.parseInt(pkt.get(33)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(11)) - Integer.parseInt(pkt.get(32)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(11)) - Integer.parseInt(pkt.get(33)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(32)) - Integer.parseInt(pkt.get(33)))));
 	}
 	
-	
+	//Method to write lines from the new log to file.
 	public void toTextFile() {
 		ArrayList<String> format = new ArrayList<>();
 		for(List<String> pkt : pkts) {
@@ -391,7 +411,6 @@ public class AddingRecordsNetFlow2 {
 		try ( BufferedWriter bw = new BufferedWriter (new FileWriter (FNAME)) ) 
 		{			
 			for (String line : format) {
-				//System.out.println(line);
 				bw.write(line + "\n");
 			}
 			System.out.println("Created file " + FNAME);
@@ -404,17 +423,12 @@ public class AddingRecordsNetFlow2 {
 		
 	
 	public static void main(String[] args) throws FileNotFoundException {
-//		AddingRecordsNetFlow ar = new AddingRecordsNetFlow(
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Netflow\\O2-Netflow.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Netflow\\A2-Netflow.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Netflow\\IIRO2-Netflow.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Netflow\\IIRA2-Netflow.dat");
 		if (args.length !=4) {
 			System.err.println("usage: java -jar jarfile.jar InputO.dat InputA.dat IIROoutput.dat IIRAoutput\n");
 			System.exit(-1);
 		}
 		else {
-			AddingRecordsNetFlow2 rs = new AddingRecordsNetFlow2(args[0],args[1],args[2],args[3]);
+			AddingRecordsNetFlow rs = new AddingRecordsNetFlow(args[0],args[1],args[2],args[3]);
 		}
 	}
 }

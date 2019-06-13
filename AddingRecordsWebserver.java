@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.List;
 
 public class AddingRecordsWebserver {
-	//Format for fieldnames er:
-	//ip-address,user-identifier, userid, timestamp, request method, url, http-version, http-status code, 
-	//object size,objectnr,objecttype; 
+	//Format for fieldnames is:
+	//ip-address,identificationProtocol, userid, timestamp, request method, request, http-version, 
+	//http-status code, object size, objectnr, objecttype; 
 	ArrayList<String> fieldnames = new ArrayList<String>(Arrays.asList("CHECKIP","BOOLEAN","BOOLEAN",
 			"MINUSLONG","BOOLEAN","BOOLEAN","BOOLEAN","MINUS","MINUS","objectnr","objecttype"));
 	
@@ -30,17 +30,11 @@ public class AddingRecordsWebserver {
 		pkts = og2.getPkts();
 		addingInterRecords();
 		toTextFile();
+		System.out.println(og1.getNrOfPkts() + " packets - " + og1.getHosts() + " hosts - " + og1
+				.getWebPages() + " web pages");
 	}
 	
-	public void getFieldnames() {
-		int j = 0;
-		for(String f : fieldnames) {
-			System.out.println(j + " " + f);
-			j++;
-		}
-	}
-	
-	//Method for finding the first pkt from an object
+	//Method for finding the first pkt from an object.
 	public List<String> findingFirstPkt(ArrayList<List<String>> pkts, int i) {
 		for(List<String> pkt : pkts) {
 			if(pkt.get(9).equals(Integer.toString(i))) {
@@ -50,6 +44,7 @@ public class AddingRecordsWebserver {
 		return null;
 	}
 	
+	//Method for adding inter-records.
 	public void addingInterRecords() {
 		for(int i = 1; i < Integer.parseInt(pkts.get(pkts.size()-1).get(9))+1; i ++) {
 			this.pkt = findingFirstPkt(pkts,i);
@@ -64,6 +59,8 @@ public class AddingRecordsWebserver {
 		}
 	}
 	
+	//Method for adding inter-records. Based on the format defined at the start, fields are compared with
+	//different methods, like MINUS, BOOLEAN, etc.
 	public void addingFields(List<String> pkt) {
 		for(int i= 0;i < fieldnames.size();i++) {
 			if(fieldnames.get(i).equals("MINUS")) {
@@ -94,6 +91,7 @@ public class AddingRecordsWebserver {
 		
 	}
 	
+	//Checks if IP address is version 4 or 6, and performs XOR comparison based on the version.
 	public void checkIP(List<String> pkt, int i) {
 		if(pkt.get(i).contains(".")) {
 			compareXORV4(pkt, i);
@@ -103,6 +101,7 @@ public class AddingRecordsWebserver {
 		}
 	}
 	
+	//Comparing records based on XOR.
 	public void compareXOR(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -113,6 +112,7 @@ public class AddingRecordsWebserver {
 		}
 	}
 	
+	//Comparing records based on XOR for IPv4.
 	public void compareXORV4(List<String> pkt, int i) {
 		if(!this.pkt.get(i).equals("null") && !pkt.get(i).equals("null")) {
 			fieldnames.add(Integer.toString(i));
@@ -131,6 +131,7 @@ public class AddingRecordsWebserver {
 		}
 	}
 
+	//Comparing records based on XOR for IPv6.
 	public void compareXORV6(List<String> pkt, int i) {
 		if(!this.pkt.get(i).equals("null") && !pkt.get(i).equals("null")) {	
 			fieldnames.add(Integer.toString(i));
@@ -153,6 +154,7 @@ public class AddingRecordsWebserver {
 		}
 	}
 	
+	//Comparing records based on MINUS.
 	public void compareMinus(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -163,6 +165,7 @@ public class AddingRecordsWebserver {
 		}
 	}
 	
+	//Comparing records based on MINUS with long.
 	public void compareMinusLong(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -173,6 +176,7 @@ public class AddingRecordsWebserver {
 		}
 	}
 	
+	//Comparing records based on BOOLEAN.
 	public void compareBoolean(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -183,12 +187,7 @@ public class AddingRecordsWebserver {
 		}
 	}
 	
-//	public void outprint() {
-//		for(List<String> pkt : pkts) {
-//			System.out.println(pkt.get(63));
-//		}
-//	}
-	
+	//Method to write lines from the new log to file.
 	public void toTextFile() {
 		ArrayList<String> format = new ArrayList<>();
 		for(List<String> pkt : pkts) {
@@ -202,7 +201,6 @@ public class AddingRecordsWebserver {
 		try ( BufferedWriter bw = new BufferedWriter (new FileWriter (FNAME)) ) 
 		{			
 			for (String line : format) {
-				//System.out.println(line);
 				bw.write(line + "\n");
 			}
 			System.out.println("Created file " + FNAME);
@@ -215,11 +213,6 @@ public class AddingRecordsWebserver {
 		
 	
 	public static void main(String[] args) throws FileNotFoundException {
-//		AddingRecordsWebserver ar = new AddingRecordsWebserver(
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\O-Webserver.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\A-Webserver.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\IIRO2-Webserver.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\IIRA2-Webserver.dat");
 		if (args.length !=4) {
 		      System.err.println("usage: java -jar jarfile.jar InputO.dat InputA.dat IIROoutput.dat IIRAoutput\n");
 		      System.exit(-1);

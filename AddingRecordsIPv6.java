@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class AddingRecordsIPv6 {
-	//Format for fieldnames er:
+	//Format for fieldnames is:
 	//version,timestamp,trafficclass,flowlabel,payloadlength,nextheader,hoplimit,srcipv6,dstipv6,srcport,dstport,seqNr,
 	//ackNr,dataOffset,reserved,isNS,isCWR,isECE,isURG,isACK,isPSH,isRST,isSYN,isFIN,windowSize,checksum,urgentPointer,
 	//length,objectnr,objecttype; 
@@ -33,17 +33,11 @@ public class AddingRecordsIPv6 {
 		pkts = og2.getPkts();
 		addingInterRecords();
 		toTextFile();
+		System.out.println(og1.getNrOfPkts() + " packets - " + og1.getHosts() + " hosts - " + og1
+				.getWebPages() + " web pages");
 	}
 	
-	public void getFieldnames() {
-		int j = 0;
-		for(String f : fieldnames) {
-			System.out.println(j + " " + f);
-			j++;
-		}
-	}
-	
-	//Method for finding the first pkt from an object
+	//Method for finding the first pkt from an object.
 	public List<String> findingFirstPkt(ArrayList<List<String>> pkts, int i) {
 		for(List<String> pkt : pkts) {
 			if(pkt.get(28).equals(Integer.toString(i))) {
@@ -53,6 +47,7 @@ public class AddingRecordsIPv6 {
 		return null;
 	}
 	
+	//Method for adding inter- and intra-records.
 	public void addingInterRecords() {
 		for(int i = 1; i < Integer.parseInt(pkts.get(pkts.size()-1).get(28))+1; i ++) {
 			this.pkt = findingFirstPkt(pkts,i);
@@ -68,6 +63,8 @@ public class AddingRecordsIPv6 {
 		}
 	}
 	
+	//Method for adding inter-records. Based on the format defined at the start, fields are compared with
+	//different methods, like MINUS, BOOLEAN, etc.
 	public void addingFields(List<String> pkt) {
 		for(int i= 0;i < fieldnames.size();i++) {
 			if(fieldnames.get(i).equals("MINUS")) {
@@ -88,10 +85,10 @@ public class AddingRecordsIPv6 {
 			else {
 				continue;
 			}
-		}
-		
+		}	
 	}
 	
+	//Comparing records based on XOR.
 	public void compareXOR(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -102,6 +99,7 @@ public class AddingRecordsIPv6 {
 		}
 	}
 
+	//Comparing records based on XOR for IPv6.
 	public void compareXORV6(List<String> pkt, int i) {
 		if(!this.pkt.get(i).equals("null") && !pkt.get(i).equals("null")) {	
 			fieldnames.add(Integer.toString(i));
@@ -124,6 +122,7 @@ public class AddingRecordsIPv6 {
 		}
 	}
 	
+	//Comparing records based on MINUS.
 	public void compareMinus(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -134,6 +133,7 @@ public class AddingRecordsIPv6 {
 		}
 	}
 	
+	//Comparing records based on MINUS with long.
 	public void compareMinusLong(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -144,6 +144,7 @@ public class AddingRecordsIPv6 {
 		}
 	}
 	
+	//Comparing records based on BOOLEAN.
 	public void compareBoolean(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -153,7 +154,8 @@ public class AddingRecordsIPv6 {
 			pkt.add(Boolean.toString((this.pkt.get(i).equals(pkt.get(i)))));
 		}
 	}
-		
+	
+	//Method that adds intra-records for IP addresses and ports.
 	public void addingIntraRecords(List<String> pkt) {
 		String[] s = pkt.get(7).split(":");
 		String[] t = pkt.get(8).split(":");
@@ -236,21 +238,15 @@ public class AddingRecordsIPv6 {
 		fieldnames.add("IntraRecordPort");
 
 		
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(9)) - Integer.parseInt(pkt.get(10)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(9)) - Integer.parseInt(pkt.get(38)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(9)) - Integer.parseInt(pkt.get(39)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(10)) - Integer.parseInt(pkt.get(38)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(10)) - Integer.parseInt(pkt.get(39)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(38)) - Integer.parseInt(pkt.get(39)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(9)) - Integer.parseInt(pkt.get(10)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(9)) - Integer.parseInt(pkt.get(38)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(9)) - Integer.parseInt(pkt.get(39)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(10)) - Integer.parseInt(pkt.get(38)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(10)) - Integer.parseInt(pkt.get(39)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(38)) - Integer.parseInt(pkt.get(39)))));
 	}
 	
-	public void outprint() {
-		for(List<String> pkt : pkts) {
-			System.out.println(pkt.get(63));
-		}
-	}
-	
-	
+	//Method to write lines from the new log to file.
 	public void toTextFile() {
 		ArrayList<String> format = new ArrayList<>();
 		for(List<String> pkt : pkts) {
@@ -264,7 +260,6 @@ public class AddingRecordsIPv6 {
 		try ( BufferedWriter bw = new BufferedWriter (new FileWriter (FNAME)) ) 
 		{			
 			for (String line : format) {
-				//System.out.println(line);
 				bw.write(line + "\n");
 			}
 			System.out.println("Created file " + FNAME);
@@ -277,11 +272,6 @@ public class AddingRecordsIPv6 {
 		
 	
 	public static void main(String[] args) throws FileNotFoundException {
-//		AddingRecordsIPv6 ar = new AddingRecordsIPv6(
-//				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv6\\O-IPv6.dat",
-//				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv6\\A-IPv6.dat",
-//				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv6\\IIRO2-IPv6.dat",
-//				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv6\\IIRA2-IPv6.dat");
 		if (args.length !=4) {
 		      System.err.println("usage: java -jar jarfile.jar InputO.dat InputA.dat IIROoutput.dat IIRAoutput\n");
 		      System.exit(-1);

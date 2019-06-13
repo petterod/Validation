@@ -11,7 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 
-public class FeatureSelectionFinal {
+public class FeatureSelection {
 	
 	ArrayList<List<String>> original = new ArrayList<List<String>>();
 	ArrayList<List<String>> anonymized = new ArrayList<List<String>>();
@@ -22,7 +22,7 @@ public class FeatureSelectionFinal {
 	List<String> pktsAdded;
 	
 	
-	public FeatureSelectionFinal(String type, String original, String anonymized, String outputO, String outputA) throws FileNotFoundException{
+	public FeatureSelection(String type, String original, String anonymized, String outputO, String outputA) throws FileNotFoundException{
 		Scanner s = new Scanner(new File(original));
 		Scanner t = new Scanner(new File(anonymized));
 		while(s.hasNextLine()) {	
@@ -36,6 +36,7 @@ public class FeatureSelectionFinal {
 		checkType(type, outputO, outputA);		
 	}
 	
+	//Checks which log type is selected, and performs feature selection for this log type
 	public void checkType(String type, String outputO, String outputA) {
 		if(type.equalsIgnoreCase("ipv4")) {
 			forEveryObject(this.original, outputO,35,36);
@@ -46,8 +47,8 @@ public class FeatureSelectionFinal {
 			forEveryObject(this.anonymized, outputA,28,29);
 		}
 		else if(type.equalsIgnoreCase("netflow")) {
-			forEveryObject(this.original, outputO,21,22);
-			forEveryObject(this.anonymized, outputA,21,22);
+			forEveryObject(this.original, outputO,20,21);
+			forEveryObject(this.anonymized, outputA,20,21);
 		}
 		else if(type.equalsIgnoreCase("webserver")) {
 			forEveryObject(this.original, outputO,9,10);
@@ -59,7 +60,7 @@ public class FeatureSelectionFinal {
 		}		
 	}
 	
-	//Method that makes a list of the field specified in the argument i. 
+	//Method that makes a list of the field specified in the argument fieldIndex. 
 	public ArrayList<String> getField(ArrayList<List<String>> pkts, int fieldIndex, int objectnr, int nrIndex) {
 		ArrayList<String> res = new ArrayList<String>();
 		for(List<String> pkt : pkts) {
@@ -80,9 +81,7 @@ public class FeatureSelectionFinal {
 				if(i != j && !(i == nrIndex || j == nrIndex) && !(i == typeIndex || j == typeIndex)) {
 					ArrayList<String> columnJ = getField(settype,j,objectnr,nrIndex);
 					entropy = new Entropy(columnI,columnJ);
-					//System.out.println(i + "-" + j + ": " + entropy.normalizedMutualInformation());
 					if(!overThreshold.contains(j + ";" + i) && entropy.normalizedMutualInformation() > 0.99) {
-						//System.out.println(i + "-" + j + ": " + entropy.normalizedMutualInformation());
 						overThreshold.add(i + ";" + j);
 					}
 				}
@@ -120,10 +119,10 @@ public class FeatureSelectionFinal {
 	public ArrayList<List<String>> sharingFields() {
 		groupCollection = new ArrayList<List<String>>();
 		if(!combined.isEmpty()) {
-			ArrayList<String> midlertidig = new ArrayList<String>(Arrays.asList(combined.get(0)));
+			ArrayList<String> combinedFields = new ArrayList<String>(Arrays.asList(combined.get(0)));
 			ArrayList<List<String>> temp = new ArrayList<>();
 			for(String group1 : combined){
-				if(midlertidig.contains(group1)) {
+				if(combinedFields.contains(group1)) {
 					List<String> group1fields = new ArrayList<String>(Arrays.asList(group1.split(";")));
 					for(String group2 : combined) {
 						if(!group1.equals(group2)) {
@@ -132,11 +131,11 @@ public class FeatureSelectionFinal {
 								List<String> notpresent = new ArrayList<String>(group2fields);
 								notpresent.removeAll(group1fields);
 								group1fields.addAll(notpresent);
-								midlertidig.add(group1);
+								combinedFields.add(group1);
 							}
 							else {
-								midlertidig.add(group1);
-								midlertidig.add(group2);
+								combinedFields.add(group1);
+								combinedFields.add(group2);
 							}
 						}
 					}
@@ -215,29 +214,7 @@ public class FeatureSelectionFinal {
 		toTextFile(objectsAdded,FNAME);
 	}
 	
-	//Method to get the different lists containing different sets of combined data based on the stage of the selection phase.	
-	public void getOverthreshold() {
-		if(!groupCollection.isEmpty()) {
-			System.out.println(groupCollection.get(0).size());
-			for(List<String> x : groupCollection) {
-				System.out.println(x);
-			}
-		}
-		else {
-			System.out.println("GroupCollection is empty");
-		}
-//		for(String pkt : pktsAdded) {
-//			System.out.println(pkt);
-//		}
-//		for(String pkt : combined) {
-//			System.out.println(pkt);
-//		}
-//		for(String pkt : overThreshold) {
-//			System.out.println(pkt);
-//		}
-	}	
-	
-	//Method to write lines from the feature selected pkts to file.
+	//Method to write lines from the new log to text file.
 	public void toTextFile(ArrayList<List<String>> objectsAdded, String FNAME) {
 		ArrayList<String> format = new ArrayList<>();
 		for(List<String> pkt : objectsAdded) {
@@ -251,7 +228,7 @@ public class FeatureSelectionFinal {
 		try ( BufferedWriter bw = new BufferedWriter (new FileWriter (FNAME)) ) 
 		{
 			for (String line : format) {
-				bw.write(line);// + "\n");
+				bw.write(line);
 			}
 			System.out.println("Created file " + FNAME);
 			bw.close ();
@@ -262,18 +239,13 @@ public class FeatureSelectionFinal {
 	}
 	
 	public static void main(String[] args) throws FileNotFoundException {
-//		FeatureSelection fs = new FeatureSelection("webserver",
-//				 "C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\IIRO-Webserver.dat",
-//				 "C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\IIRA-Webserver.dat",
-//				 "C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\FSO2-Webserver.dat",
-//				 "C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\FSA2-Webserver.dat");
 		if (args.length !=5) {
 		      System.err.println("usage: java -jar jarfile.jar logtype originalInput.dat anonymizedInput.dat"
 		      		+ " originalOutput.dat anonymizedOutput.dat\nThe logtype must either be IPv4, IPv6, Netflow, Webserver or Syslog.");
 		      System.exit(-1);
 		    }
 		else {
-			FeatureSelectionFinal fs = new FeatureSelectionFinal(args[0],args[1],args[2],args[3],args[4]);
+			FeatureSelection fs = new FeatureSelection(args[0],args[1],args[2],args[3],args[4]);
 		}
 	}
 }

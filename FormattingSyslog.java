@@ -27,14 +27,15 @@ public class FormattingSyslog {
 		toTextFile(FNAME);
 	}
 	
+	//Changes the timestamp to epoch time.
 	public String timestampWork(String timestamp) throws ParseException {
-		
 	   	SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:sszzz");
 		Date date = df.parse(timestamp);
 		long epoch = date.getTime();
 		return Long.toString(epoch);
 	}
 	
+	//Formats the syslog. Timestamps are changed.
 	public void formatting() throws ParseException {
 		for(int i = 1; i < syslog.size(); i++) {
 			String format = "";
@@ -47,18 +48,17 @@ public class FormattingSyslog {
 				}
 			}
 			else {
-				format += " " + "\t";
+				format += " ";
 			}
 			formatted.add(format);
 		}
 	}
 	
-	
+	//Method for writing the new log to text file.
 	public void toTextFile(String FNAME) {		
 		try ( BufferedWriter bw = new BufferedWriter (new FileWriter (FNAME)) ) 
 		{			
 			for (String line : formatted) {
-				//System.out.println(line);
 				bw.write(line + "\n");
 			}
 			System.out.println("Created file " + FNAME);
@@ -72,16 +72,13 @@ public class FormattingSyslog {
 	
 	
 	public static void main(String[] args) throws FileNotFoundException, ParseException {
-		FormattingSyslog fw = new FormattingSyslog(
-				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Syslog\\syslog-iso-time-example2.log",
-				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Syslog\\O2-Syslog.dat");
-//			if (args.length !=2) {
-//		      System.err.println("usage: java -jar jarfile.jar originalInput.log formattedOutput.dat\n");
-//		      System.exit(-1);
-//		    }
-//		else {
-//			FormattingSyslog fs = new FormattingSyslog(args[0],args[1]);
-//		}		
+			if (args.length !=2) {
+		      System.err.println("usage: java -jar jarfile.jar originalInput.log formattedOutput.dat\n");
+		      System.exit(-1);
+		    }
+		else {
+			FormattingSyslog fs = new FormattingSyslog(args[0],args[1]);
+		}		
 	}
 
 }

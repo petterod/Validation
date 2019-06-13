@@ -9,8 +9,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class AddingRecordsSyslog {
-	//Format for fieldnames er:
-	//timestamp,loghost,application/process,message,objectnr,objecttype; 
+	//Format for fieldnames is:
+	//timestamp,hostname,app-name,message,objectnr,objecttype; 
 	ArrayList<String> fieldnames = new ArrayList<String>(Arrays.asList("MINUSLONG","BOOLEAN","BOOLEAN",
 	"BOOLEAN","objectnr","objecttype"));
 	
@@ -29,17 +29,11 @@ public class AddingRecordsSyslog {
 		pkts = og2.getPkts();
 		addingInterRecords();
 		toTextFile();
+		System.out.println(og1.getNrOfPkts() + " packets - " + og1.getHosts() + " hosts - " + og1
+				.getWebPages() + " web pages");	
 	}
 	
-	public void getFieldnames() {
-		int j = 0;
-		for(String f : fieldnames) {
-			System.out.println(j + " " + f);
-			j++;
-		}
-	}
-	
-	//Method for finding the first pkt from an object
+	//Method for finding the first pkt from an object.
 	public List<String> findingFirstPkt(ArrayList<List<String>> pkts, int i) {
 		for(List<String> pkt : pkts) {
 			if(pkt.get(4).equals(Integer.toString(i))) {
@@ -49,6 +43,7 @@ public class AddingRecordsSyslog {
 		return null;
 	}
 	
+	//Method for adding inter-records.
 	public void addingInterRecords() {
 		for(int i = 1; i < Integer.parseInt(pkts.get(pkts.size()-1).get(4))+1; i ++) {
 			this.pkt = findingFirstPkt(pkts,i);
@@ -63,6 +58,8 @@ public class AddingRecordsSyslog {
 		}
 	}
 	
+	//Method for adding inter-records. Based on the format defined at the start, fields are compared with
+	//different methods, like MINUS, BOOLEAN, etc.
 	public void addingFields(List<String> pkt) {
 		for(int i= 0;i < fieldnames.size();i++) {
 			if(fieldnames.get(i).equals("MINUS")) {
@@ -86,10 +83,10 @@ public class AddingRecordsSyslog {
 			else {
 				continue;
 			}
-		}
-		
+		}	
 	}
 	
+	//Comparing records based on XOR.
 	public void compareXOR(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -100,6 +97,7 @@ public class AddingRecordsSyslog {
 		}
 	}
 	
+	//Comparing records based on XOR for IPv4.
 	public void compareXORV4(List<String> pkt, int i) {
 		if(!this.pkt.get(i).equals("null") && !pkt.get(i).equals("null")) {
 			fieldnames.add(Integer.toString(i));
@@ -118,6 +116,7 @@ public class AddingRecordsSyslog {
 		}
 	}
 
+	//Comparing records based on XOR for IPv6.
 	public void compareXORV6(List<String> pkt, int i) {
 		if(!this.pkt.get(i).equals("null") && !pkt.get(i).equals("null")) {	
 			fieldnames.add(Integer.toString(i));
@@ -140,6 +139,7 @@ public class AddingRecordsSyslog {
 		}
 	}
 	
+	//Comparing records based on MINUS.
 	public void compareMinus(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -150,6 +150,7 @@ public class AddingRecordsSyslog {
 		}
 	}
 	
+	//Comparing records based on MINUS with long.
 	public void compareMinusLong(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -160,6 +161,7 @@ public class AddingRecordsSyslog {
 		}
 	}
 	
+	//Comparing records based on BOOLEAN.
 	public void compareBoolean(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -170,12 +172,7 @@ public class AddingRecordsSyslog {
 		}
 	}
 	
-	public void outprint() {
-		for(List<String> pkt : pkts) {
-			System.out.println(pkt.get(2));
-		}
-	}
-	
+	//Method to write lines from the new log to file.
 	public void toTextFile() {
 		ArrayList<String> format = new ArrayList<>();
 		for(List<String> pkt : pkts) {
@@ -189,7 +186,6 @@ public class AddingRecordsSyslog {
 		try ( BufferedWriter bw = new BufferedWriter (new FileWriter (FNAME)) ) 
 		{			
 			for (String line : format) {
-				//System.out.println(line);
 				bw.write(line + "\n");
 			}
 			System.out.println("Created file " + FNAME);
@@ -202,11 +198,6 @@ public class AddingRecordsSyslog {
 		
 	
 	public static void main(String[] args) throws FileNotFoundException {
-//		AddingRecordsSyslog ar = new AddingRecordsSyslog(
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Syslog\\O-Syslog.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Syslog\\A-Syslog.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Syslog\\IIRO-Syslog.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Syslog\\IIRA-Syslog.dat");
 		if (args.length !=4) {
 		      System.err.println("usage: java -jar jarfile.jar InputO.dat InputA.dat IIROoutput.dat IIRAoutput\n");
 		      System.exit(-1);

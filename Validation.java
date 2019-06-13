@@ -6,16 +6,12 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class ResultsCalculationFinal{
+public class Validation{
 	
-	//Finner AO med den laveste verdien fra ObjectAnonymity
-	//For AO: finner feltet med lavest entropy
-	//For felt: finner object med høyest sannsynlighet
-	
-	ObjectAnonymity3 oa;
+	ObjectAnonymity oa;
 	HashMap<String, Double> hostResults;
 	HashMap<String, Double> webpageResults;
-	Integer ao;
+	Integer features;
 	Integer anonymizedObject;
 	ArrayList<Double> hostAverages = new ArrayList<Double>();
 	ArrayList<Double> webpageAverages = new ArrayList<Double>();
@@ -24,12 +20,13 @@ public class ResultsCalculationFinal{
 	ArrayList<Integer> mismatchesHost = new ArrayList<Integer>();
 	ArrayList<Integer> mismatchesWebpage = new ArrayList<Integer>();
 	
-	public ResultsCalculationFinal(String originals, String anonymized, String FNAME) throws FileNotFoundException {
-		oa = new ObjectAnonymity3(originals,anonymized);
+	public Validation(String originals, String anonymized, String FNAME) throws FileNotFoundException {
+		oa = new ObjectAnonymity(originals,anonymized);
 		iteration();
 		toTextFile(FNAME);
 	}
 	
+	//Calculates the average entropy of either hostResults or webpageResults.
 	public Double calculateAverageEntropy(String objectType) {
 		Double res = 0.0;
 		if(objectType.equals("host")) {
@@ -50,11 +47,11 @@ public class ResultsCalculationFinal{
 		}	
 	}
 	
+	//Finds the anonymized object in either hostResults or webpageResults with the lowest entropy.
 	public Integer getLowestEntropy(String objectType) {
 		anonymizedObject = null;
 	    String minKey = null;
 	    double minValue = Double.MAX_VALUE;
-	    //System.out.println(hostResults);
 	    if(objectType.equals("host")) {
 		    for (String key : hostResults.keySet()) {
 		        double value = hostResults.get(key).doubleValue();
@@ -73,18 +70,16 @@ public class ResultsCalculationFinal{
 			    }
 	    	}
 	    }
-//	    System.out.println("Entropies for all anonymized objects:");
-//	    System.out.println(hostResults);
-//	    System.out.println("The lowest entropy belongs to anonymized object " + minKey + "\n");
 	    anonymizedObject = Integer.parseInt(minKey);
 	    return anonymizedObject;
 	}
 	
-	public Integer getLowestField(int anonymizedObject, String objectType) {
-		ao = oa.getSizes(anonymizedObject).get("anonymized");
+	//Finds the feature for anonymizedObject with the lowest entropy.
+	public Integer getLowestFeature(int anonymizedObject, String objectType) {
+		features = oa.getSizes(anonymizedObject).get("anonymized");
 		String minKey = null;
 		double minValue = Double.MAX_VALUE;
-		for(int i = 2; i < ao-2;i++) {
+		for(int i = 2; i < features-2;i++) {
 			try {
 				double value = Double.parseDouble(oa.getFieldEntropy(anonymizedObject,i-2));
 				if (value < minValue) {
@@ -96,27 +91,13 @@ public class ResultsCalculationFinal{
 				continue;
 			}
 		}
-//		System.out.println("Entropies for all fields of the anonymized object:");
-//		System.out.println(oa.getFieldEntropy(anonymizedObject,objectType,ao, uo));
-//		System.out.println("The lowest entropy belongs to field " + minKey + "\n");
 		return Integer.parseInt(minKey);
 	}
 	
+	//Finds the unanonymized object with the highest probability.
 	public Integer getHighestProbability(String objectType) {
-		int lowestField = getLowestField(anonymizedObject,objectType);
-		ArrayList<Double> probabilities = oa.getProbability(anonymizedObject,lowestField,objectType);
-		if(probabilities.stream().mapToDouble(f -> f.doubleValue()).sum() == 0.0) {
-			System.out.println("her " + oa.summationSim(anonymizedObject, lowestField, objectType));
-			System.out.println("AnonymizedObject is " + anonymizedObject);
-			System.out.println("Lowest field is " + lowestField);
-//			System.out.println("probabilities " + probabilities);
-//			System.out.println("burde vært " + oa.getCalcSimilarity(19, 23, "host"));
-//			System.out.println(oa.getAllEntropyValues(anonymizedObject));
-//			System.out.println(oa.getValues(19, 23));
-//			for(int i = 1; i < 132; i++) {
-//				System.out.println(oa.getValues2(i, 23));
-//			}
-		}
+		int lowestFeature = getLowestFeature(anonymizedObject,objectType);
+		ArrayList<Double> probabilities = oa.getProbability(anonymizedObject,lowestFeature,objectType);
 		Integer maxKey = null;
 		double max = Double.MIN_VALUE;
 		for(int i=0; i<probabilities.size(); i++){
@@ -126,18 +107,19 @@ public class ResultsCalculationFinal{
 				maxKey = i + 1;
 		    }
 		}
-//		System.out.println("The probabilities of all unanonymized objects for this field and this anonymized object:");
-//		System.out.println(probabilities);
-//		System.out.println("The highest probability belongs to unanonymized object " + maxKey + "\n");
 		return maxKey;
 	}
 	
+	//Performs the mapping while the size of mapped objects is smaller than the total number of objects.
+	//For every iteration, finds the anonymized object with the lowest entropy, and the unanonymized object
+	//with the highest probability of being equal to this anonymized object. Also keeps track of number of
+	//mismappings. Does mapping for all host objects first, then all web page objects. 
 	public void iteration() {
 		int hostMismatches = 0;
 		int webpageMismatches = 0;
 		while (oa.getMappedAnonymizedHost().size() + oa.getMappedAnonymizedWebpage().size() < oa.getNrOfObjects()) {
 			hostResults = oa.forAllAnonymizedObjects("host");
-			if(!hostResults.isEmpty()) {
+			if(hostResults.size() > 1) {
 				System.out.println("Average anonymized object entropy for host: "  + calculateAverageEntropy("host"));
 				hostAveragesMax.add(oa.getMax("host"));
 				getLowestEntropy("host");
@@ -150,9 +132,28 @@ public class ResultsCalculationFinal{
 				oa.setMapped(anonymizedObject, unanonymizedObject,"host");
 				System.out.println("-------------------------------------------------------------------------------");
 			}
+			else if(hostResults.size() == 1){
+				System.out.println("Average anonymized object entropy for host: "  + calculateAverageEntropy("host"));
+				hostAveragesMax.add(oa.getMax("host"));
+				getLowestEntropy("host");
+				int unanonymizedObject = 0;
+				for(Integer host : oa.getHosts()) {
+					if(!oa.getMappedAnonymizedHost().contains(host)) {
+						unanonymizedObject = host;
+						break;
+					}
+				}
+				if(anonymizedObject != unanonymizedObject) {
+					hostMismatches ++;	
+				}
+				mismatchesHost.add(hostMismatches);
+				System.out.println("AO " + anonymizedObject + " UO " + unanonymizedObject);
+				oa.setMapped(anonymizedObject, unanonymizedObject,"host");
+				System.out.println("-------------------------------------------------------------------------------");
+			}
 			else {
 				webpageResults = oa.forAllAnonymizedObjects("webPage");
-				if(!webpageResults.isEmpty()) {
+				if(webpageResults.size() > 1) {
 					System.out.println("Average anonymized object entropy for web pages: "  + calculateAverageEntropy("webPage"));
 					webpageAveragesMax.add(oa.getMax("webPage"));
 					getLowestEntropy("webPage");
@@ -165,6 +166,30 @@ public class ResultsCalculationFinal{
 					oa.setMapped(anonymizedObject, unanonymizedObject,"webPage");
 					System.out.println("-------------------------------------------------------------------------------");
 				}
+				else if(webpageResults.size() == 1){
+					System.out.println("size is 1");
+					System.out.println("Average anonymized object entropy for host: "  + calculateAverageEntropy("webPage"));
+					webpageAveragesMax.add(oa.getMax("webPage"));
+					getLowestEntropy("webPage");
+					int unanonymizedObject = 0;	
+					for(Integer webpage : oa.getWebpages()) {
+						if(!oa.getMappedAnonymizedWebpage().contains(webpage)) {
+							unanonymizedObject = webpage;
+							break;
+						}
+					}
+					if(anonymizedObject != unanonymizedObject) {
+						webpageMismatches ++;	
+					}
+					mismatchesWebpage.add(webpageMismatches);
+					System.out.println("AO " + anonymizedObject + " UO " + unanonymizedObject);
+					oa.setMapped(anonymizedObject, unanonymizedObject,"webPage");
+					System.out.println("-------------------------------------------------------------------------------");
+				}
+				else {
+					System.out.println("Completed");
+					break;
+				}
 			}
 		}
 		System.out.println(hostAverages);
@@ -175,17 +200,7 @@ public class ResultsCalculationFinal{
 		System.out.println(mismatchesWebpage);
 	}
 	
-		//Metode for å finne auxiliary information fra entropy-målet (det uanonymiserte objektet som har høyest entropy
-	//med det anonymiserte objektet legges til som en mapping mellom uanonymisert og anonymisert.
-	public void findingAuxiliaryInformation() {
-		
-	}
-	
-	//Metode for å legge til auxiliary information til neste runde av entropy-kjøring.
-	public void addingAuxiliaryInformation() {
-		
-	}
-	
+	//Method to write lines from the new log to csv file.
 	public void toTextFile(String FNAME) {
 	    try (PrintWriter writer = new PrintWriter(new File(FNAME))) {
 	        StringBuilder sb = new StringBuilder();
@@ -214,16 +229,12 @@ public class ResultsCalculationFinal{
 	}	
 	
 	public static void main(String[] args) throws FileNotFoundException {
-//		ResultsCalculationFinal rs = new ResultsCalculationFinal(
-//				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv4\\FSO-IPv4.dat", 
-//				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv4\\FSA-IPv4.dat",
-//				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv4\\Results3-IPv4.csv");
 		if (args.length !=3) {
 		      System.err.println("usage: java -jar jarfile.jar originalInput.dat anonymizedInput.dat results.csv \n");
 		      System.exit(-1);
 		    }
 		else {
-			ResultsCalculationFinal rs = new ResultsCalculationFinal(args[0],args[1],args[2]);
+			Validation rs = new Validation(args[0],args[1],args[2]);
 		}
 	}
 }

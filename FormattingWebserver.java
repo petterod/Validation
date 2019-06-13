@@ -13,11 +13,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 
-public class FormattingWebserverFinal {
+public class FormattingWebserver {
 	ArrayList<List<String>> weblog = new ArrayList<List<String>>();
 	ArrayList<String> formatted = new ArrayList<String>();
 	
-	public FormattingWebserverFinal(String inputpath, String FNAME) throws FileNotFoundException, ParseException {
+	public FormattingWebserver(String inputpath, String FNAME) throws FileNotFoundException, ParseException {
 		Scanner s = new Scanner(new File(inputpath));
 		while(s.hasNextLine()) {	
 			weblog.add(new ArrayList<String>(Arrays.asList(s.nextLine().split(" "))));
@@ -27,6 +27,7 @@ public class FormattingWebserverFinal {
 		toTextFile(FNAME);
 	}
 	
+	//Changes the timestamp to epoch time.
 	public String timestampWork(String timestamp) throws ParseException {
 	   	SimpleDateFormat df = new SimpleDateFormat("dd/MMM/yyyy:HH:mm:ss zzz");
 		Date date = df.parse(timestamp);
@@ -34,6 +35,7 @@ public class FormattingWebserverFinal {
 		return Long.toString(epoch);
 	}
 	
+	//Formats IPv6 address so they always display the complete address.
 	public String formatIPv6(String address) {
 		String[] liste = address.split(":");
 		int index = address.indexOf("::");
@@ -48,6 +50,7 @@ public class FormattingWebserverFinal {
 		return res;
 	}
 	
+	//Checks if the IP address is version 4 or 6, and if version 6 is complete or not.
 	public String checkIP(String ip) {
 		if(ip.contains(".")) {
 			return ip;
@@ -60,6 +63,7 @@ public class FormattingWebserverFinal {
 		}
 	}
 	
+	//Checks if the request method used is a valid one.
 	public String checkRequestMethod(String requestMethod) {
 		ArrayList<String> requestMethods = new ArrayList<String>(Arrays.asList("GET","HEAD","POST","PUT","DELETE","TRACE",
 			"OPTIONS","CONNECT","PATCH"));
@@ -71,6 +75,7 @@ public class FormattingWebserverFinal {
 		}
 	}
 	
+	//Checks if the HTTP-version used is a valid one.
 	public String checkHTTPversion(String httpVersion) {
 		ArrayList<String> allowedVersions = new ArrayList<String>(Arrays.asList("HTTP/1.1","HTTP/2.0","HTTP/3.0",
 				"HTTP/0.9","HTTP/1.0"));
@@ -82,12 +87,14 @@ public class FormattingWebserverFinal {
 		}
 	}
 	
+	//Formats the web server log. Timestamps are changed, IPv6 Addresses might be formatted if they are
+	//not complete. The Request Line of a web server log is split into Request Method, Request and HTTP-Version.
 	public void formatting() throws ParseException {
 		for(List<String> pkt : weblog) {
 			String format = "";
 			format += checkIP(pkt.get(0)) + "\t";
-			format += pkt.get(1) + "\t";
-			format += pkt.get(2) + "\t";
+			format += "-" + "\t";
+			format += "-" + "\t";
 			format += timestampWork(pkt.get(3).substring(1) + " " + pkt.get(4).substring(0,pkt.get(4).length()-1))
 					+ "\t";
 			if(!pkt.get(5).substring(1, pkt.get(5).length()-1).equals("-") &&
@@ -124,12 +131,11 @@ public class FormattingWebserverFinal {
 		}
 	}
 	
-	
+	//Method for writing the new log to text file.
 	public void toTextFile(String FNAME) {
 		try ( BufferedWriter bw = new BufferedWriter (new FileWriter (FNAME)) ) 
 		{			
 			for (String line : formatted) {
-				//System.out.println(line);
 				bw.write(line + "\n");
 			}
 			System.out.println("Created file " + FNAME);
@@ -143,15 +149,12 @@ public class FormattingWebserverFinal {
 	
 	
 	public static void main(String[] args) throws FileNotFoundException, ParseException {
-//		FormattingWebserver fw = new FormattingWebserver(
-//				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\weblog-example2.log",
-//				"C:\\Users\\Petter\\Documents\\Master\\Datasets\\Webserver\\O2-Webserver.dat");
 		if (args.length !=2) {
 	      System.err.println("usage: java -jar jarfile.jar originalInput.log formattedOutput.dat\n");
 	      System.exit(-1);
 	    }
 		else {
-			FormattingWebserverFinal fs = new FormattingWebserverFinal(args[0],args[1]);
+			FormattingWebserver fs = new FormattingWebserver(args[0],args[1]);
 		}	
 	}
 }

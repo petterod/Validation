@@ -9,11 +9,11 @@ import java.util.Arrays;
 import java.util.List;
 
 public class AddingRecordsIPv4 {
-	//Format for fieldnames er:
+	//Format for fieldnames is:
 	//version,timestamp,internetHeaderLength,dscp,ecn,totalLength,identification,reservedSet,dontFragment,moreFragments,
 	//fragmentOffset,timeToLive,protocol,headerChecksum,srcipv4,dstipv4,srcport,dstport,seqNr,ackNr,dataOffset,reserved,
 	//isNS,isCWR,isECE,isURG,isACK,isPSH,isRST,isSYN,isFIN,windowSize,checksum,urgentPointer,length,objectnr,objecttype; 
-	ArrayList<String> fieldnames = new ArrayList<String>(Arrays.asList("trenger ikke sammenligne version","MINUSLONG",
+	ArrayList<String> fieldnames = new ArrayList<String>(Arrays.asList("no need to compare version","MINUSLONG",
 	"MINUS","XOR","XOR","MINUS","MINUS","BOOLEAN","BOOLEAN","BOOLEAN","MINUS","MINUS","BOOLEAN","BOOLEAN","XORIPV4",
 	"XORIPV4","MINUS","MINUS","MINUSLONG","MINUSLONG","MINUS","XOR","BOOLEAN","BOOLEAN","BOOLEAN","BOOLEAN","BOOLEAN",
 	"BOOLEAN","BOOLEAN","BOOLEAN","BOOLEAN","MINUS","BOOLEAN","MINUS","MINUS","objectnr","objecttype"));
@@ -33,17 +33,11 @@ public class AddingRecordsIPv4 {
 		pkts = og2.getPkts();
 		addingInterRecords();
 		toTextFile();
+		System.out.println(og1.getNrOfPkts() + " packets - " + og1.getHosts() + " hosts - " + og1
+				.getWebPages() + " web pages");
 	}
 	
-	public void getFieldnames() {
-		int j = 0;
-		for(String f : fieldnames) {
-			System.out.println(j + " " + f);
-			j++;
-		}
-	}
-	
-	//Method for finding the first pkt from an object
+	//Method for finding the first pkt from an object.
 	public List<String> findingFirstPkt(ArrayList<List<String>> pkts, int i) {
 		for(List<String> pkt : pkts) {
 			if(pkt.get(35).equals(Integer.toString(i))) {
@@ -53,6 +47,7 @@ public class AddingRecordsIPv4 {
 		return null;
 	}
 	
+	//Method for adding inter- and intra-records.
 	public void addingInterRecords() {
 		for(int i = 1; i < Integer.parseInt(pkts.get(pkts.size()-1).get(35))+1; i ++) {
 			this.pkt = findingFirstPkt(pkts,i);
@@ -68,6 +63,8 @@ public class AddingRecordsIPv4 {
 		}
 	}
 	
+	//Method for adding inter-records. Based on the format defined at the start, fields are compared with
+	//different methods, like MINUS, BOOLEAN, etc.
 	public void addingFields(List<String> pkt) {
 		for(int i= 0;i < fieldnames.size();i++) {
 			if(fieldnames.get(i).equals("MINUS")) {
@@ -92,6 +89,7 @@ public class AddingRecordsIPv4 {
 		
 	}
 	
+	//Comparing records based on XOR.
 	public void compareXOR(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -102,6 +100,7 @@ public class AddingRecordsIPv4 {
 		}
 	}
 	
+	//Comparing records based on XOR for IPv4.	
 	public void compareXORV4(List<String> pkt, int i) {
 		if(!this.pkt.get(i).equals("null") && !pkt.get(i).equals("null")) {
 			fieldnames.add(Integer.toString(i));
@@ -120,6 +119,7 @@ public class AddingRecordsIPv4 {
 		}
 	}
 
+	//Comparing records based on MINUS.
 	public void compareMinus(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -130,6 +130,7 @@ public class AddingRecordsIPv4 {
 		}
 	}
 	
+	//Comparing records based on MINUS with long. 
 	public void compareMinusLong(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -140,6 +141,7 @@ public class AddingRecordsIPv4 {
 		}
 	}
 	
+	//Comparing records based on BOOLEAN.
 	public void compareBoolean(List<String> pkt, int i) {
 		fieldnames.add(Integer.toString(i));
 		if(this.pkt.equals(pkt)){
@@ -150,7 +152,7 @@ public class AddingRecordsIPv4 {
 		}
 	}
 	
-	
+	//Method that adds intra-records for IP addresses and ports.
 	public void addingIntraRecords(List<String> pkt) {
 		String[] s = pkt.get(14).split("\\.");
 		String[] t = pkt.get(15).split("\\.");
@@ -208,21 +210,15 @@ public class AddingRecordsIPv4 {
 		fieldnames.add("IntraRecordPort");
 		fieldnames.add("IntraRecordPort");
 		
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(16)) - Integer.parseInt(pkt.get(17)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(16)) - Integer.parseInt(pkt.get(52)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(16)) - Integer.parseInt(pkt.get(53)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(17)) - Integer.parseInt(pkt.get(52)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(17)) - Integer.parseInt(pkt.get(53)))));
-		pkt.add(Integer.toString(Math.abs(Integer.parseInt(this.pkt.get(52)) - Integer.parseInt(pkt.get(53)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(16)) - Integer.parseInt(pkt.get(17)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(16)) - Integer.parseInt(pkt.get(52)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(16)) - Integer.parseInt(pkt.get(53)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(17)) - Integer.parseInt(pkt.get(52)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(17)) - Integer.parseInt(pkt.get(53)))));
+		pkt.add(Integer.toString(Math.abs(Integer.parseInt(pkt.get(52)) - Integer.parseInt(pkt.get(53)))));
 	}
 	
-	public void outprint() {
-		for(List<String> pkt : pkts) {
-			System.out.println(pkt.get(63));
-		}
-	}
-	
-	
+	//Method to write lines from the new log to file.	
 	public void toTextFile() {
 		ArrayList<String> format = new ArrayList<>();
 		for(List<String> pkt : pkts) {
@@ -236,7 +232,6 @@ public class AddingRecordsIPv4 {
 		try ( BufferedWriter bw = new BufferedWriter (new FileWriter (FNAME)) ) 
 		{			
 			for (String line : format) {
-				//System.out.println(line);
 				bw.write(line + "\n");
 			}
 			System.out.println("Created file " + FNAME);
@@ -249,11 +244,6 @@ public class AddingRecordsIPv4 {
 		
 	
 	public static void main(String[] args) throws FileNotFoundException {
-//		AddingRecordsIPv4 ar = new AddingRecordsIPv4(
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv4\\O-IPv4.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv4\\A-IPv4.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv4\\IIRO3-IPv4.dat",
-//		"C:\\Users\\Petter\\Documents\\Master\\Datasets\\IPv4\\IIRA3-IPv4.dat");
 		if (args.length !=4) {
 		      System.err.println("Usage: java -jar jarfile.jar InputO.dat InputA.dat IIROoutput.dat IIRAoutput\n");
 		      System.exit(-1);

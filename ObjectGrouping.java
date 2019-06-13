@@ -24,6 +24,7 @@ public class ObjectGrouping {
 		assignObjectnr(checkType(type),type);
 	}
 	
+	//Checks which log type is selected and returns the field index of Source IP Address in this log.
 	public int checkType(String type) {
 		if(type.equals("IPv4")) {
 			return 14;
@@ -45,6 +46,7 @@ public class ObjectGrouping {
 		}
 	}
 	
+	//Groups objects as either hosts or web pages, with a specific index depending on the type.
 	public void groupObjects(String type) {
 		if(type.equals("IPv4")) {
 			groupWebPageObjects(14,17);
@@ -66,6 +68,7 @@ public class ObjectGrouping {
 		}
 	}
 	
+	//Groups a packet as a web page if the criterias are met.
 	public void groupWebPageObjects(int addr, int port) {
 		for(List<String> pkt : pkts) {
 			if((!webPages.contains(pkt.get(addr))) && (pkt.get(port).equals("80") || pkt.get(port).equals("443"))) {
@@ -75,6 +78,7 @@ public class ObjectGrouping {
 		}
 	}
 	
+	//Groups a packet as a host if the criterias are met.
 	public void groupHostObjects(int addr) {
 		for(List<String> pkt : pkts) {
 			if(!hosts.contains(pkt.get(addr)) && (!webPages.contains(pkt.get(addr)))) {
@@ -84,6 +88,9 @@ public class ObjectGrouping {
 		}
 	}
 	
+	//Assings object number to the packets grouped as either web page or host. All packets with equal
+	//Source IP Address are grouped as one object, and thus have the same object number. A sort on the
+	//object number is performed in the end, based on which type the log is.
 	public void assignObjectnr(int addr, String type) {
 		int i = 1;
 		for(String host : hosts) {
@@ -118,29 +125,22 @@ public class ObjectGrouping {
 		}
 		else if(type.equals("Syslog")) {
 			Collections.sort(pkts,new ListComparatorSyslog());
-		}
-		
-	}
-		
-	public void getHosts() {
-		for (String host : hosts) {
-			System.out.println(host);
-		}
+		}	
 	}
 	
-	public void getWebPages() {
-		for (String webPage : webPages) {
-			System.out.println(webPage);
-		}
+	public int getNrOfPkts() {
+		return pkts.size();
+	}
+		
+	public int getHosts() {
+		return hosts.size();
+	}
+	
+	public int getWebPages() {
+		return webPages.size();
 	}
 	
 	public ArrayList<List<String>> getPkts() {
 		return pkts;
 	}
-	
-	@Override
-	public String toString() {
-		return "" + pkts;
-	}
-
 }
